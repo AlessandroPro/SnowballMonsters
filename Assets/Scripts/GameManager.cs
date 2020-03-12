@@ -2,67 +2,110 @@
 using UnityEngine.SceneManagement;
 
 using Photon.Realtime;
+using Photon.Pun;
+using System.Collections;
+using UnityEngine.UI;
 
-namespace Photon.Pun.Demo.PunBasics
+public class GameManager : MonoBehaviourPunCallbacks
 {
-    public class GameManager : MonoBehaviourPunCallbacks
+    public GameObject winnerUI;
+    public Text winnerText;
+
+    public GameObject player1SpawnPosition;
+    public GameObject player2SpawnPosition;
+
+    private bool gameOver = false;
+
+    private GameObject player1;
+    private GameObject player2;
+
+    public static bool returnToLobby = false;
+
+    // Start Method
+    void Start()
     {
-        public GameObject winnerUI;
-
-        public GameObject player1SpawnPosition;
-        public GameObject player2SpawnPosition;
-
-        private GameObject player1;
-        private GameObject player2;
-
-        // Start Method
-        void Start()
+        if (!PhotonNetwork.IsConnected)
         {
-            if (!PhotonNetwork.IsConnected) // 1
-            {
-                SceneManager.LoadScene("Launcher");
-                return;
-            }
-
-            if (PlayerManager.LocalPlayerInstance == null)
-            {
-                if (PhotonNetwork.IsMasterClient) // 2
-                {
-                    Debug.Log("Instantiating Player 1");
-
-                    player1 = PhotonNetwork.Instantiate("SnowMonster", player1SpawnPosition.transform.position, player1SpawnPosition.transform.rotation, 0);
-                }
-                else 
-                {
-                    player2 = PhotonNetwork.Instantiate("SnowMonster", player2SpawnPosition.transform.position, player2SpawnPosition.transform.rotation, 0);
-                }
-            }
+            SceneManager.LoadScene("Launcher");
+            return;
         }
 
-        // Update Method
-        void Update()
+        if (PhotonNetwork.IsMasterClient) 
         {
-            if (Input.GetKeyDown(KeyCode.Escape)) //1
-            {
-                Application.Quit();
-            }
-        }
+            Debug.Log("Instantiating Player 1");
 
-        // Photon Methods
-        public override void OnPlayerLeftRoom(Player other)
+            player1 = PhotonNetwork.Instantiate("SnowMonster", player1SpawnPosition.transform.position, player1SpawnPosition.transform.rotation, 0);
+        }
+        else 
         {
-            Debug.Log("OnPlayerLeftRoom() " + other.NickName); // seen when other disconnects
-            if (PhotonNetwork.IsMasterClient)
-            {
-                PhotonNetwork.LoadLevel("Launcher");
-            }
+            player2 = PhotonNetwork.Instantiate("SnowMonster", player2SpawnPosition.transform.position, player2SpawnPosition.transform.rotation, 0);
         }
+        
+    }
 
-        // Helper Methods
-        public void QuitRoom()
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape)) 
         {
             Application.Quit();
         }
+    }
+
+    public override void OnLeftRoom()
+    {
+        base.OnLeftRoom();
+        returnToLobby = true;
+        PhotonNetwork.LoadLevel("Launcher");
+    }
+
+    public override void OnPlayerLeftRoom(Player other)
+    {
+         Debug.Log("OnPlayerLeftRoom() " + other.NickName);
+         PhotonNetwork.LeaveRoom();
+    }
+
+
+    public void QuitRoom()
+    {
+        Application.Quit();
+    }
+
+    public void GameOver()
+    {
+        if(gameOver == false)
+        {
+            gameOver = true;
+            winnerUI.SetActive(true);
+
+            SnowMonsterController player = null;
+
+            if (player1)
+            {
+                player = player1.GetComponent<SnowMonsterController>();
+            }
+            else if(player2)
+            {
+                player = player2.GetComponent<SnowMonsterController>();
+            }
+
+
+            if (player.isDead)
+            {
+                winnerText.text = "You Lose!";
+            }
+            else
+            {
+                winnerText.text = "You Win!";
+            }
+            
+            StartCoroutine(BackToLobby());
+        }
+    }
+
+    IEnumerator BackToLobby()
+    {
+        yield return new WaitForSeconds(3);
+        PhotonNetwork.LeaveRoom();
     }
 }
 

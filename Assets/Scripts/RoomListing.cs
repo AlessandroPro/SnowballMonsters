@@ -9,17 +9,25 @@ public class RoomListing : MonoBehaviour
 
     [SerializeField]
     private Text _text;
+    private Launcher launcher;
+    public GameObject joinButton;
 
-    public RoomInfo RoomInfo { get; private set; }
+    public RoomInfo roomInfo { get; private set; }
 
-    public void SetRoomInfo(RoomInfo roomInfo)
+    private void Start()
     {
-        RoomInfo = roomInfo;
-        _text.text = roomInfo.MaxPlayers + ", " + roomInfo.Name;
+        launcher = FindObjectOfType<Launcher>();
     }
 
-    public void onRoomSelected()
+    public void SetRoomInfo(RoomInfo _roomInfo)
     {
-        FindObjectOfType<Launcher>().SetRoomNameText(_text.text);
+        roomInfo = _roomInfo;
+        _text.text = _roomInfo.Name;
+    }
+
+    public void OnClick_JoinRoom()
+    {
+        launcher.SetRoomName(_text.text);
+        launcher.JoinRoom();
     }
 }

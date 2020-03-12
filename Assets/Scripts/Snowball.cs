@@ -9,6 +9,8 @@ public class Snowball : MonoBehaviourPun
     public float speed;
     public GameObject poofPefab;
 
+    public object PhotonTargets { get; private set; }
+
     // Update is called once per frame
     void Update()
     {
@@ -20,9 +22,21 @@ public class Snowball : MonoBehaviourPun
 
     private void OnCollisionEnter(Collision collision)
     {
-        if(base.photonView.IsMine)
+        if(base.photonView.IsMine && !collision.gameObject.CompareTag("Player"))
         {
             PhotonNetwork.Destroy(this.gameObject);
         }
+    }
+
+    private void OnDestroy()
+    {
+        GameObject snowPoof = Instantiate(poofPefab);
+        poofPefab.transform.position = transform.position;
+    }
+
+    [PunRPC]
+    void DestroySelf()
+    {
+        Destroy(this.gameObject);
     }
 }

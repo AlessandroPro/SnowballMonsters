@@ -10,6 +10,7 @@ public class SnowMonsterController : MonoBehaviourPun, IPunObservable
     public float speed;
     public Animator anim;
     public Text playerNameText;
+    public bool isDead = false;
 
 
     private void Start()
@@ -23,7 +24,7 @@ public class SnowMonsterController : MonoBehaviourPun, IPunObservable
     // Update is called once per frame
     void Update()
     {
-        if(base.photonView.IsMine)
+        if(base.photonView.IsMine && !isDead)
         {
             UpdateMovement();
             UpdateAttack();
@@ -61,37 +62,53 @@ public class SnowMonsterController : MonoBehaviourPun, IPunObservable
     {
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            throwSnowball();
+            anim.SetTrigger("Attack 01");
         }
     }
 
-    void throwSnowball()
+    public void throwSnowball()
     {
-        anim.SetTrigger("Attack 01");
-        Vector3 snowballSpawnOffset = new Vector3(0.5f, 0.5f, 0);
-        GameObject snowball = PhotonNetwork.Instantiate("Snowball", transform.position + snowballSpawnOffset, transform.rotation);
+        if(base.photonView.IsMine)
+        {
+            Vector3 snowballSpawnOffset = new Vector3(transform.forward.x, 0.5f, 0);
+            GameObject snowball = PhotonNetwork.Instantiate("Snowball", transform.position + snowballSpawnOffset, transform.rotation);
+        }
     }
 
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        throw new System.NotImplementedException();
+        if (stream.IsWriting)
+        {
+            stream.SendNext(PhotonNetwork.LocalPlayer.NickName);
+            stream.SendNext(isDead);
+        }
+        else
+        {
+            playerNameText.text = (string)stream.ReceiveNext();
+            isDead = (bool)stream.ReceiveNext();
+        }
     }
 
-    //private void OnEnable()
-    //{
-    //    PhotonNetwork.NetworkingClient.EventReceived += NetworkingClient_EventReceived;
-    //}
+    void die()
+    {
+        anim.SetTrigger("Die");
+        isDead = true;
+    }
 
-    //private void OnDisable()
-    //{
-    //    PhotonNetwork.NetworkingClient.EventReceived -= NetworkingClient_EventReceived;
-    //}
+    private void OnCollisionEnter(Collision collision)
+    {
+        if(collision.gameObject.CompareTag("Snowball"))
+        {
+            if(base.photonView.IsMine && !isDead)
+            {
+                die();
+                collision.transform.GetComponent<PhotonView>().RPC("DestroySelf", RpcTarget.All);
+            }
+        }
+    }
 
-    //private void NetworkingClient_EventReceived(ExitGames.Client.Photon.EventData obj)
-    //{
-    //    if(obj.Code == 0)
-    //    {
-
-    //    }
-    //}
+    public void endGame()
+    {
+        FindObjectOfType<GameManager>().GameOver();
+    }
 }
